@@ -53,7 +53,7 @@ jobs:
             --channel "$RELEASE_CHANNEL" \
             --version "$RELEASE_VERSION" \
             --release-notes "$RELEASE_NOTES" \
-            --update-base-url "https://novaflow-beijixingzhike.xiangsheng0704.chatgpt.site" \
+            --update-base-url "https://www.beijixingzhike.com" \
             --update-metadata incoming/update-artifact.json \
             --subtitle-manifest "${manifests[0]}" \
             --public-key update-public.pem \
