@@ -16,6 +16,12 @@ on:
         description: Semantic version
         required: true
         type: string
+      mode:
+        description: Windows release contract
+        required: true
+        default: formal
+        type: choice
+        options: [formal, publicunsigned]
       release_notes:
         description: Customer-facing release notes
         required: true
@@ -39,25 +45,43 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           mkdir -p incoming finalized
-          gh release download "$RELEASE_TAG" --dir incoming --pattern "update-artifact.json" --pattern "*.manifest.json"
+          if [[ "${{ inputs.mode }}" == "publicunsigned" ]]; then
+            gh release download "$RELEASE_TAG" --dir incoming --pattern "release-metadata.json"
+          else
+            gh release download "$RELEASE_TAG" --dir incoming --pattern "update-artifact.json" --pattern "*.manifest.json"
+          fi
       - name: Sign update and subtitle manifests
         env:
           NOVAFLOW_UPDATE_SIGNING_KEY_PEM: ${{ secrets.NOVAFLOW_UPDATE_SIGNING_KEY_PEM }}
           RELEASE_CHANNEL: ${{ inputs.channel }}
           RELEASE_VERSION: ${{ inputs.version }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
+          RELEASE_MODE: ${{ inputs.mode }}
         run: |
-          manifests=(incoming/*.manifest.json)
-          test "${#manifests[@]}" -eq 1
-          python finalize_release.py \
-            --channel "$RELEASE_CHANNEL" \
-            --version "$RELEASE_VERSION" \
-            --release-notes "$RELEASE_NOTES" \
-            --update-base-url "https://www.beijixingzhike.com" \
-            --update-metadata incoming/update-artifact.json \
-            --subtitle-manifest "${manifests[0]}" \
-            --public-key update-public.pem \
-            --output-root finalized
+          if [[ "$RELEASE_MODE" == "publicunsigned" ]]; then
+            python finalize_release.py \
+              --mode publicunsigned \
+              --channel "$RELEASE_CHANNEL" \
+              --version "$RELEASE_VERSION" \
+              --release-notes "$RELEASE_NOTES" \
+              --update-base-url "https://www.beijixingzhike.com" \
+              --release-metadata incoming/release-metadata.json \
+              --public-key update-public.pem \
+              --output-root finalized
+          else
+            manifests=(incoming/*.manifest.json)
+            test "${#manifests[@]}" -eq 1
+            python finalize_release.py \
+              --mode formal \
+              --channel "$RELEASE_CHANNEL" \
+              --version "$RELEASE_VERSION" \
+              --release-notes "$RELEASE_NOTES" \
+              --update-base-url "https://www.beijixingzhike.com" \
+              --update-metadata incoming/update-artifact.json \
+              --subtitle-manifest "${manifests[0]}" \
+              --public-key update-public.pem \
+              --output-root finalized
+          fi
       - name: Publish signed metadata
         env:
           GH_TOKEN: ${{ github.token }}
@@ -65,3 +89,14 @@ jobs:
         run: |
           gh release upload "$RELEASE_TAG" finalized/* --clobber
           gh release edit "$RELEASE_TAG" --draft=false
+      - name: Enforce stable release consistency
+        if: inputs.channel == 'stable'
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          python check_stable_release_consistency.py \
+            --expected-version "$RELEASE_VERSION" \
+            --github-release-metadata-url "https://github.com/chinacccc/novaflow-releases/releases/download/v${RELEASE_VERSION}/release-metadata.json" \
+            --desktop-feed-url "https://www.beijixingzhike.com/stable/latest.json" \
+            --website-download-url "https://www.beijixingzhike.com/api/download/windows" \
+            --public-key update-public.pem
