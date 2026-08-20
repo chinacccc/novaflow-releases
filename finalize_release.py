@@ -220,9 +220,51 @@ def finalize_public_unsigned_feed(
     return latest
 
 
+def sign_subtitle_manifest(
+    *,
+    subtitle_manifest_path: Path,
+    public_key_path: Path,
+    output_root: Path,
+) -> Path:
+    """Sign one subtitle runtime manifest without publishing a release feed."""
+    private_text = os.environ.get("NOVAFLOW_UPDATE_SIGNING_KEY_PEM", "").strip()
+    if not private_text:
+        raise ValueError("GitHub update signing secret is missing")
+    private = load_pem_private_key(private_text.replace("\\n", "\n").encode("ascii"), None)
+    public = load_pem_public_key(public_key_path.resolve(strict=True).read_bytes())
+    if not isinstance(private, Ed25519PrivateKey):
+        raise ValueError("update signing secret is not Ed25519")
+    probe = b"novaflow-release-key-match"
+    try:
+        public.verify(private.sign(probe), probe)
+    except Exception as error:
+        raise ValueError("update signing secret does not match the public key") from error
+
+    subtitle_manifest = subtitle_manifest_path.resolve(strict=True)
+    if (
+        _SAFE_FILE.fullmatch(subtitle_manifest.name) is None
+        or not subtitle_manifest.name.endswith(".zip.manifest.json")
+    ):
+        raise ValueError("subtitle manifest name is invalid")
+    output = output_root.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    subtitle_signature = output / f"{subtitle_manifest.name}.sig"
+    if subtitle_signature.exists():
+        raise FileExistsError("release finalization output already exists")
+    subtitle_signature.write_text(
+        base64.b64encode(private.sign(subtitle_manifest.read_bytes())).decode("ascii") + "\n",
+        encoding="ascii",
+    )
+    return subtitle_signature
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Finalize a zero-cost NovaFlow release")
-    parser.add_argument("--mode", choices=("formal", "publicunsigned"), default="formal")
+    parser.add_argument(
+        "--mode",
+        choices=("formal", "publicunsigned", "subtitle"),
+        default="formal",
+    )
     parser.add_argument("--channel", required=True, choices=("stable", "beta"))
     parser.add_argument("--version", required=True)
     parser.add_argument("--release-notes", required=True)
@@ -233,7 +275,17 @@ def main() -> int:
     parser.add_argument("--public-key", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
     arguments = parser.parse_args()
-    if arguments.mode == "publicunsigned":
+    if arguments.mode == "subtitle":
+        if arguments.subtitle_manifest is None:
+            parser.error("--subtitle-manifest is required for subtitle signing")
+        paths = (
+            sign_subtitle_manifest(
+                subtitle_manifest_path=arguments.subtitle_manifest,
+                public_key_path=arguments.public_key,
+                output_root=arguments.output_root,
+            ),
+        )
+    elif arguments.mode == "publicunsigned":
         if arguments.release_metadata is None:
             parser.error("--release-metadata is required for PublicUnsigned")
         paths = (

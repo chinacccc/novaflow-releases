@@ -22,6 +22,12 @@ on:
         default: formal
         type: choice
         options: [formal, publicunsigned]
+      operation:
+        description: Prepare the subtitle runtime or finalize the draft release
+        required: true
+        default: finalize-release
+        type: choice
+        options: [finalize-release, sign-subtitle-runtime]
       release_notes:
         description: Customer-facing release notes
         required: true
@@ -45,7 +51,9 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           mkdir -p incoming finalized
-          if [[ "${{ inputs.mode }}" == "publicunsigned" ]]; then
+          if [[ "${{ inputs.operation }}" == "sign-subtitle-runtime" ]]; then
+            gh release download "$RELEASE_TAG" --dir incoming --pattern "*.manifest.json"
+          elif [[ "${{ inputs.mode }}" == "publicunsigned" ]]; then
             gh release download "$RELEASE_TAG" --dir incoming --pattern "release-metadata.json"
           else
             gh release download "$RELEASE_TAG" --dir incoming --pattern "update-artifact.json" --pattern "*.manifest.json"
@@ -57,8 +65,22 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
           RELEASE_MODE: ${{ inputs.mode }}
+          RELEASE_OPERATION: ${{ inputs.operation }}
         run: |
-          if [[ "$RELEASE_MODE" == "publicunsigned" ]]; then
+          if [[ "$RELEASE_OPERATION" == "sign-subtitle-runtime" ]]; then
+            manifests=(incoming/*.manifest.json)
+            test -f "${manifests[0]}"
+            test "${#manifests[@]}" -eq 1
+            python finalize_release.py \
+              --mode subtitle \
+              --channel "$RELEASE_CHANNEL" \
+              --version "$RELEASE_VERSION" \
+              --release-notes "$RELEASE_NOTES" \
+              --update-base-url "https://www.beijixingzhike.com" \
+              --subtitle-manifest "${manifests[0]}" \
+              --public-key update-public.pem \
+              --output-root finalized
+          elif [[ "$RELEASE_MODE" == "publicunsigned" ]]; then
             python finalize_release.py \
               --mode publicunsigned \
               --channel "$RELEASE_CHANNEL" \
@@ -88,9 +110,15 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           gh release upload "$RELEASE_TAG" finalized/* --clobber
+      - name: Publish draft release
+        if: inputs.operation == 'finalize-release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
           gh release edit "$RELEASE_TAG" --draft=false
       - name: Enforce stable release consistency
-        if: inputs.channel == 'stable'
+        if: inputs.operation == 'finalize-release' && inputs.channel == 'stable'
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
