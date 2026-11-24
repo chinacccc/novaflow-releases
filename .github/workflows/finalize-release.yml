@@ -23,11 +23,11 @@ on:
         type: choice
         options: [formal, publicunsigned]
       operation:
-        description: Prepare the subtitle runtime or finalize the draft release
+        description: Prepare one component or finalize the draft release
         required: true
         default: finalize-release
         type: choice
-        options: [finalize-release, sign-subtitle-runtime]
+        options: [finalize-release, sign-subtitle-runtime, sign-provider-runtime]
       release_notes:
         description: Customer-facing release notes
         required: true
@@ -51,7 +51,9 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           mkdir -p incoming finalized
-          if [[ "${{ inputs.operation }}" == "sign-subtitle-runtime" ]]; then
+          if [[ "${{ inputs.operation }}" == "sign-provider-runtime" ]]; then
+            gh release download "$RELEASE_TAG" --dir incoming --pattern "NovaFlow-Provider-Runtime-*.zip.manifest.json"
+          elif [[ "${{ inputs.operation }}" == "sign-subtitle-runtime" ]]; then
             gh release download "$RELEASE_TAG" --dir incoming --pattern "*.manifest.json"
           elif [[ "${{ inputs.mode }}" == "publicunsigned" ]]; then
             gh release download "$RELEASE_TAG" --dir incoming --pattern "release-metadata.json"
@@ -67,7 +69,20 @@ jobs:
           RELEASE_MODE: ${{ inputs.mode }}
           RELEASE_OPERATION: ${{ inputs.operation }}
         run: |
-          if [[ "$RELEASE_OPERATION" == "sign-subtitle-runtime" ]]; then
+          if [[ "$RELEASE_OPERATION" == "sign-provider-runtime" ]]; then
+            manifests=(incoming/NovaFlow-Provider-Runtime-*.zip.manifest.json)
+            test -f "${manifests[0]}"
+            test "${#manifests[@]}" -eq 1
+            python finalize_release.py \
+              --mode provider \
+              --channel "$RELEASE_CHANNEL" \
+              --version "$RELEASE_VERSION" \
+              --release-notes "$RELEASE_NOTES" \
+              --update-base-url "https://www.beijixingzhike.com" \
+              --provider-manifest "${manifests[0]}" \
+              --public-key update-public.pem \
+              --output-root finalized
+          elif [[ "$RELEASE_OPERATION" == "sign-subtitle-runtime" ]]; then
             manifests=(incoming/*.manifest.json)
             test -f "${manifests[0]}"
             test "${#manifests[@]}" -eq 1
