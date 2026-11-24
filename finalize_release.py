@@ -265,6 +265,7 @@ def sign_provider_runtime(
     provider_manifest_path: Path,
     public_key_path: Path,
     output_root: Path,
+    provider_asset_base_url: str | None = None,
 ) -> tuple[Path, Path]:
     if _VERSION.fullmatch(version) is None:
         raise ValueError("provider runtime version is invalid")
@@ -328,6 +329,18 @@ def sign_provider_runtime(
     ):
         raise ValueError("provider runtime manifest identity is invalid")
     archive_name = manifest_path.name.removesuffix(".manifest.json")
+    asset_base = (provider_asset_base_url or f"{origin}/provider").rstrip("/")
+    asset_base_parsed = urlsplit(asset_base)
+    if (
+        asset_base_parsed.scheme != "https"
+        or not asset_base_parsed.hostname
+        or asset_base_parsed.username is not None
+        or asset_base_parsed.password is not None
+        or asset_base_parsed.port not in {None, 443}
+        or asset_base_parsed.query
+        or asset_base_parsed.fragment
+    ):
+        raise ValueError("provider runtime asset base URL is invalid")
 
     private_text = os.environ.get("NOVAFLOW_UPDATE_SIGNING_KEY_PEM", "").strip()
     if not private_text:
@@ -355,7 +368,7 @@ def sign_provider_runtime(
             "byte_size": manifest["byte_size"],
             "file_name": archive_name,
             "sha256": manifest["sha256"],
-            "url": f"{origin}/provider/{archive_name}",
+            "url": f"{asset_base}/{archive_name}",
         },
         "published_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "runtime_manifest": manifest,
@@ -388,6 +401,7 @@ def main() -> int:
     parser.add_argument("--update-metadata", type=Path)
     parser.add_argument("--subtitle-manifest", type=Path)
     parser.add_argument("--provider-manifest", type=Path)
+    parser.add_argument("--provider-asset-base-url")
     parser.add_argument("--release-metadata", type=Path)
     parser.add_argument("--public-key", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
@@ -398,6 +412,7 @@ def main() -> int:
         paths = sign_provider_runtime(
             version=arguments.version,
             update_base_url=arguments.update_base_url,
+            provider_asset_base_url=arguments.provider_asset_base_url,
             provider_manifest_path=arguments.provider_manifest,
             public_key_path=arguments.public_key,
             output_root=arguments.output_root,

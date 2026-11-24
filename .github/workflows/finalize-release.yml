@@ -79,6 +79,7 @@ jobs:
               --version "$RELEASE_VERSION" \
               --release-notes "$RELEASE_NOTES" \
               --update-base-url "https://www.beijixingzhike.com" \
+              --provider-asset-base-url "https://github.com/chinacccc/novaflow-releases/releases/download/provider-v${RELEASE_VERSION}" \
               --provider-manifest "${manifests[0]}" \
               --public-key update-public.pem \
               --output-root finalized
@@ -125,6 +126,15 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           gh release upload "$RELEASE_TAG" finalized/* --clobber
+      - name: Publish Provider feed pointer
+        if: inputs.operation == 'sign-provider-runtime'
+        run: |
+          cp finalized/provider-latest.json provider-latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add provider-latest.json
+          git commit -m "release: update Provider runtime feed to ${{ inputs.version }}"
+          git push origin HEAD:main
       - name: Publish draft release
         if: inputs.operation == 'finalize-release'
         env:
