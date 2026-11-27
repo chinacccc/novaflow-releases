@@ -1,18 +1,18 @@
 {
   "artifact": {
-    "byte_size": 66860070,
-    "file_name": "NovaFlow-Provider-Runtime-1.4.0-Windows-x64.zip",
-    "sha256": "3716ef02f9e4869089483de5182de579722196537cdadd2565e429ec7ef4fb58",
-    "url": "https://github.com/chinacccc/novaflow-releases/releases/download/provider-v1.4.0/NovaFlow-Provider-Runtime-1.4.0-Windows-x64.zip"
+    "byte_size": 66996938,
+    "file_name": "NovaFlow-Provider-Runtime-1.5.0-Windows-x64.zip",
+    "sha256": "17700fdf6f588c58c24d156e7601ef482c17ffaf51285448ba69308ce473de3c",
+    "url": "https://github.com/chinacccc/novaflow-releases/releases/download/provider-v1.5.0/NovaFlow-Provider-Runtime-1.5.0-Windows-x64.zip"
   },
-  "published_at": "2026-11-25T03:59:46.015744Z",
+  "published_at": "2026-11-27T10:44:13.041294Z",
   "runtime_manifest": {
     "archive_format": "zip",
-    "byte_size": 66860070,
+    "byte_size": 66996938,
     "entrypoint_path": "provider/server/src/service/app-source.js",
-    "expanded_size": 126333726,
+    "expanded_size": 126630060,
     "file_index_path": "file-index.json",
-    "file_index_sha256": "90f9c0aec83f4c4ebd0abf7eb3e59c0f2512cfc11d84ac6de8c7c4f8240b3a68",
+    "file_index_sha256": "4123b427d5093d533e155e844f0ee93f33ba9109c0e01421ccedb01b3a3e08d1",
     "license_name": "hongguo-web GPL-3.0 separate-process provider runtime",
     "node_path": "node/node.exe",
     "package_name": "novelquickapp-provider-windows-x64",
@@ -20,11 +20,11 @@
     "provider_root_path": "provider",
     "schema_version": 1,
     "selftest_path": "provider-selftest.js",
-    "sha256": "3716ef02f9e4869089483de5182de579722196537cdadd2565e429ec7ef4fb58",
-    "version": "1.4.0"
+    "sha256": "17700fdf6f588c58c24d156e7601ef482c17ffaf51285448ba69308ce473de3c",
+    "version": "1.5.0"
   },
-  "runtime_manifest_signature": "uj3RiFsxhzTDdQ6Xjb5Xo2HKaKtOsa2szyrG8rzd+/szCH8btSLr0GQMcHv/gL/jaKq/AqP6C0tr3dqQJIhyAw==",
+  "runtime_manifest_signature": "o2+kZh3AdsL/ZZBIXTYuBm3LW+a4hhKPn11+ONnikp4gApULQWXykUMm/huaHh6+A68YVUBJA1w1rWVBlL05AQ==",
   "schema_version": 1,
-  "signature": "We6qMczDBKTfE2cP6QsR85TXkfpuAGNI/rRBK8+DPYYjrsKvJ++Anox1PxAyTlhKSqEog6jR1sJEZblYzLmiAA==",
-  "version": "1.4.0"
+  "signature": "dq08usjE36T0LZPTfMtMGYzqWhUmHxOFxo12D65u59z7odl5JQqnYsodZkMwc+Adbqza8CWLI9mSq+dEx16GDA==",
+  "version": "1.5.0"
 }
